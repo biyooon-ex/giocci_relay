@@ -37,9 +37,9 @@ TARGET_ENGINE_NAME="{:global, :engine}"
 #
 echo "exec: 
 MY_PROCESS_NAME=\"${MY_PROCESS_NAME}\" TARGET_ENGINE_NAME=\"${TARGET_ENGINE_NAME}\" iex \
---name "${NODE_NAME}@${NODE_IPADDR}" \
---cookie "${COOKIE}" \
---erl "-kernel inet_dist_listen_min ${INET_DIST_LISTEN_MIN} inet_dist_listen_max ${INET_DIST_LISTEN_MAX}" -S mix
+--name \"${NODE_NAME}@${NODE_IPADDR}\" \
+--cookie \"${COOKIE}\" \
+--erl \"-kernel inet_dist_listen_min ${INET_DIST_LISTEN_MIN} inet_dist_listen_max ${INET_DIST_LISTEN_MAX}\" -S mix
 "
 
 MY_PROCESS_NAME="${MY_PROCESS_NAME}" TARGET_ENGINE_NAME="${TARGET_ENGINE_NAME}" iex \
@@ -63,7 +63,7 @@ $ ./start_node.sh
 ```sh
 $ ./start_node.sh
 exec: 
-MY_PROCESS_NAME="{:global, :relay}" TARGET_ENGINE_NAME="{:global, :engine}" iex --name relay@192.168.10.100 --cookie idkp --erl -kernel inet_dist_listen_min 9100 inet_dist_listen_max 9155 -S mix
+MY_PROCESS_NAME="{:global, :relay}" TARGET_ENGINE_NAME="{:global, :engine}" iex --name "relay@192.168.10.100" --cookie "idkp" --erl "-kernel inet_dist_listen_min 9100 inet_dist_listen_max 9155" -S mix
 
 Erlang/OTP 25 [erts-13.1.4] [source] [64-bit] [smp:10:10] [ds:10:10:10] [async-threads:1] [jit]
 
@@ -82,9 +82,9 @@ GiocciEngineに `Node.connect()` してErlangクラスタを構築します。
 
 #### Node.connect()と確認
 ```elixir
-iex(relay@192.168.10.100)1> Node.connect(:"engine@192.168.10.100")
+iex(relay@192.168.10.100)1> Node.connect(:"engine@192.168.10.101")
 True
 
 iex(relay@192.168.10.100)2> Node.list()
-[engine@192.168.10.100]
+[engine@192.168.10.101]
 ```

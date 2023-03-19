@@ -16,9 +16,9 @@ TARGET_ENGINE_NAME="{:global, :engine}"
 #
 echo "exec: 
 MY_PROCESS_NAME=\"${MY_PROCESS_NAME}\" TARGET_ENGINE_NAME=\"${TARGET_ENGINE_NAME}\" iex \
---name "${NODE_NAME}@${NODE_IPADDR}" \
---cookie "${COOKIE}" \
---erl "-kernel inet_dist_listen_min ${INET_DIST_LISTEN_MIN} inet_dist_listen_max ${INET_DIST_LISTEN_MAX}" -S mix
+--name \"${NODE_NAME}@${NODE_IPADDR}\" \
+--cookie \"${COOKIE}\" \
+--erl \"-kernel inet_dist_listen_min ${INET_DIST_LISTEN_MIN} inet_dist_listen_max ${INET_DIST_LISTEN_MAX}\" -S mix
 "
 
 MY_PROCESS_NAME="${MY_PROCESS_NAME}" TARGET_ENGINE_NAME="${TARGET_ENGINE_NAME}" iex \

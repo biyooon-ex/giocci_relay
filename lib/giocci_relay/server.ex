@@ -25,6 +25,13 @@ defmodule GiocciRelay.Server do
   # Callback
   #
   @impl true
+  def handle_call({:detect, binary, destination}, _from, state) do
+    detection = detect(binary, destination)
+
+    {:reply, detection, state}
+  end
+
+  @impl true
   def handle_call({:get, vcontact_id}, _from, state) do
     vcontact = get(state.engine, vcontact_id)
 
@@ -105,6 +112,15 @@ defmodule GiocciRelay.Server do
   #
   def delete(engine, vcontact_id) do
     GenServer.cast(engine, {:delete, vcontact_id})
+  end
+
+  def detect(binary, destination) do
+    case destination do
+      :aws -> GenServer.call({:global, :yolo_aws}, {:detect, binary})
+      :mec -> GenServer.call({:global, :yolo_mec}, {:detect, binary})
+      :sakura -> GenServer.call({:global, :yolo_sakura}, {:detect, binary})
+      _ -> false
+    end
   end
 
   def get(engine, vcontact_id) do

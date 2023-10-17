@@ -9,6 +9,8 @@ defmodule GiocciRelay.Server do
   use GenServer
   require Logger
 
+  @timeout_ms 180_000
+
   #
   # Client API
   #
@@ -116,9 +118,9 @@ defmodule GiocciRelay.Server do
 
   def detect(binary, destination) do
     case destination do
-      :aws -> GenServer.call({:global, :yolo_aws}, {:detect, binary})
-      :mec -> GenServer.call({:global, :yolo_mec}, {:detect, binary})
-      :sakura -> GenServer.call({:global, :yolo_sakura}, {:detect, binary})
+      :aws -> GenServer.call({:global, :yolo_aws}, binary, @timeout_ms)
+      :mec -> GenServer.call({:global, :yolo_mec}, binary, @timeout_ms)
+      :sakura -> GenServer.call({:global, :yolo_sakura}, binary, @timeout_ms)
       _ -> false
     end
   end

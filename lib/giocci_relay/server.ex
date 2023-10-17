@@ -118,10 +118,20 @@ defmodule GiocciRelay.Server do
 
   def detect(binary, destination) do
     case destination do
-      :aws -> GenServer.call({:global, :yolo_aws}, binary, @timeout_ms)
-      :mec -> GenServer.call({:global, :yolo_mec}, binary, @timeout_ms)
-      :sakura -> GenServer.call({:global, :yolo_sakura}, binary, @timeout_ms)
-      _ -> false
+      :aws ->
+        Logger.info("relay to ===> #{inspect(:aws)}")
+        GenServer.call({:global, :yolo_aws}, binary, @timeout_ms)
+
+      :mec ->
+        Logger.info("relay to ===> #{inspect(:mec)}")
+        GenServer.call({:global, :yolo_mec}, binary, @timeout_ms)
+
+      :sakura ->
+        Logger.info("relay to ===> #{inspect(:sakura)}")
+        GenServer.call({:global, :yolo_sakura}, binary, @timeout_ms)
+
+      _ ->
+        false
     end
   end
 

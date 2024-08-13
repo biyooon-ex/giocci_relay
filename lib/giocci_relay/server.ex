@@ -60,6 +60,13 @@ defmodule GiocciRelay.Server do
   end
 
   @impl true
+  def handle_call({:module_save, encode_module}, _from, state) do
+    module_save_reply = module_save(state.engine, {:module_save, encode_module})
+
+    {:reply, module_save_reply, state}
+  end
+
+  @impl true
   def handle_cast({:delete, vcontact_id}, state) do
     delete(state.engine, vcontact_id)
 
@@ -148,6 +155,10 @@ defmodule GiocciRelay.Server do
 
   def list(engine) do
     GenServer.call(engine, :list)
+  end
+
+  def module_save(engine, {:module_save, encode_module}) do
+    GenServer.call(engine, {:module_save, encode_module})
   end
 
   def put(engine, vcontact_id, vcontact_element) do

@@ -74,6 +74,13 @@ defmodule GiocciRelay.Server do
   end
 
   @impl true
+  def handle_cast({:put_detect_log, total_time, processing_time, model, backend}, state) do
+    put_detect_log(total_time, processing_time, model, backend)
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_cast({:update, vcontact_id, update_vcontact_key, update_vcontact_value}, state) do
     Logger.info(
       "=> #{inspect(vcontact_id)}, #{inspect(update_vcontact_key)}, #{inspect(update_vcontact_value)}"
@@ -157,5 +164,22 @@ defmodule GiocciRelay.Server do
 
   def reg_contact(engine, vcontact_element) do
     GenServer.cast(engine, {:reg_contact, vcontact_element})
+  end
+
+  def put_detect_log(total_time, processing_time, model, backend) do
+    {{year, month, day}, {time, min, sec}} = :calendar.local_time()
+
+    file_name =
+      "#{year}" <> String.pad_leading("#{month}", 2, "0") <> String.pad_leading("#{day}", 2, "0")
+
+    local_time = "#{year}-#{month}-#{day} #{time}:#{min}:#{sec}"
+
+    log =
+      local_time <>
+        ", " <>
+        Float.to_string(total_time) <>
+        ", " <> Float.to_string(processing_time) <> ", " <> model <> ", " <> backend <> "\n"
+
+    File.write("data/#{file_name}_detect_log.txt", log, [:append])
   end
 end

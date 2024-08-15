@@ -67,6 +67,14 @@ defmodule GiocciRelay.Server do
   end
 
   @impl true
+  def handle_call({:rpc, module, function, arity}, _from, state) do
+    engine_node = :"engine@10.52.66.132"
+    rpc_reply = rpc({engine_node, module, function, arity})
+
+    {:reply, rpc_reply, state}
+  end
+
+  @impl true
   def handle_cast({:delete, vcontact_id}, state) do
     delete(state.engine, vcontact_id)
 
@@ -192,5 +200,9 @@ defmodule GiocciRelay.Server do
         ", " <> Float.to_string(processing_time) <> ", " <> model <> ", " <> backend <> "\n"
 
     File.write("data/#{file_name}_detect_log.txt", log, [:append])
+  end
+
+  def rpc({engine_node, module, function, arity}) do
+    :rpc.call(engine_node, module, function, arity)
   end
 end

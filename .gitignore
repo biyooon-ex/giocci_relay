@@ -24,3 +24,6 @@ giocci_relay-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# color theme
+.vscode/settings.json

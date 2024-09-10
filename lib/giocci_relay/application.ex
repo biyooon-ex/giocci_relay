@@ -8,12 +8,12 @@ defmodule GiocciRelay.Application do
   @impl true
   def start(_type, _args) do
     {my_process_name, _} = System.get_env("MY_PROCESS_NAME") |> Code.eval_string()
-    {target_engine_name, _} = System.get_env("TARGET_ENGINE_NAME") |> Code.eval_string()
+    {node_engine_name, _} = System.get_env("NODE_ENGINE_NAME") |> Code.eval_string()
+    rpc_engine_name = System.get_env("RPC_ENGINE_NAME") |> String.to_atom()
 
     children = [
       # Starts a worker by calling: GiocciRelay.Worker.start_link(arg)
-      # {GiocciRelay.Worker, arg}
-      {GiocciRelay.Server, [my_process_name, target_engine_name]}
+      {GiocciRelay.Server, [my_process_name, node_engine_name, rpc_engine_name]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

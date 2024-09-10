@@ -14,8 +14,8 @@ defmodule GiocciRelay.Server do
   #
   # Client API
   #
-  def start_link([pname, state]) do
-    state = %{engine: state}
+  def start_link([pname, node_engine_name, rpc_engine_name]) do
+    state = %{node_engine: node_engine_name, rpc_engine: rpc_engine_name}
     GenServer.start_link(__MODULE__, state, name: pname)
   end
 
@@ -35,14 +35,14 @@ defmodule GiocciRelay.Server do
 
   @impl true
   def handle_call({:get, vcontact_id}, _from, state) do
-    vcontact = get(state.engine, vcontact_id)
+    vcontact = get(state.node_engine, vcontact_id)
 
     {:reply, vcontact, state}
   end
 
   @impl true
   def handle_call(:list, _from, state) do
-    current_list = list(state.engine)
+    current_list = list(state.node_engine)
 
     {:reply, current_list, state}
   end
@@ -50,7 +50,7 @@ defmodule GiocciRelay.Server do
   @impl true
   def handle_call({:list_filter, filter_key, filter_value}, _from, state) do
     filter_list =
-      list(state.engine)
+      list(state.node_engine)
       |> Enum.map(fn {vcontact_id, vcontact_element} ->
         Map.put(vcontact_element, :vcontact_id, vcontact_id)
       end)
@@ -61,29 +61,31 @@ defmodule GiocciRelay.Server do
 
   @impl true
   def handle_call({:module_save, encode_module}, _from, state) do
-    module_save_reply = module_save(state.engine, {:module_save, encode_module})
+    module_save_reply = module_save(state.node_engine, {:module_save, encode_module})
 
     {:reply, module_save_reply, state}
   end
 
   @impl true
   def handle_call({:rpc, module, function, arity}, _from, state) do
-    engine_node = :"engine@10.52.66.132"
-    rpc_reply = rpc({engine_node, module, function, arity})
+    # TODO: engine_nodeをGenServerのstateに持たす（最終的にはGNSで処理したい）
+    # engine_node = :"engine@127.0.0.1"
+    rpc_engine = state.rpc_engine
+    rpc_reply = rpc({rpc_engine, module, function, arity})
 
     {:reply, rpc_reply, state}
   end
 
   @impl true
   def handle_cast({:delete, vcontact_id}, state) do
-    delete(state.engine, vcontact_id)
+    delete(state.node_engine, vcontact_id)
 
     {:noreply, state}
   end
 
   @impl true
   def handle_cast({:put, vcontact_id, vcontact_element}, state) do
-    put(state.engine, vcontact_id, vcontact_element)
+    put(state.node_engine, vcontact_id, vcontact_element)
 
     {:noreply, state}
   end
@@ -101,7 +103,7 @@ defmodule GiocciRelay.Server do
       "=> #{inspect(vcontact_id)}, #{inspect(update_vcontact_key)}, #{inspect(update_vcontact_value)}"
     )
 
-    update(state.engine, vcontact_id, update_vcontact_key, update_vcontact_value)
+    update(state.node_engine, vcontact_id, update_vcontact_key, update_vcontact_value)
 
     {:noreply, state}
   end
@@ -117,7 +119,7 @@ defmodule GiocciRelay.Server do
 
   @impl true
   def handle_cast({:reg_contact, vcontact_element}, state) do
-    reg_contact(state.engine, vcontact_element)
+    reg_contact(state.node_engine, vcontact_element)
     {:noreply, state}
   end
 
@@ -202,7 +204,7 @@ defmodule GiocciRelay.Server do
     File.write("data/#{file_name}_detect_log.txt", log, [:append])
   end
 
-  def rpc({engine_node, module, function, arity}) do
-    :rpc.call(engine_node, module, function, arity)
+  def rpc({rpc_engine, module, function, arity}) do
+    :rpc.call(rpc_engine, module, function, arity)
   end
 end

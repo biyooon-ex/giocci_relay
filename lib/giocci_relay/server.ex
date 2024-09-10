@@ -68,8 +68,6 @@ defmodule GiocciRelay.Server do
 
   @impl true
   def handle_call({:rpc, module, function, arity}, _from, state) do
-    # TODO: engine_nodeをGenServerのstateに持たす（最終的にはGNSで処理したい）
-    # engine_node = :"engine@127.0.0.1"
     rpc_engine = state.rpc_engine
     rpc_reply = rpc({rpc_engine, module, function, arity})
 

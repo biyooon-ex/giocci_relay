@@ -2,7 +2,7 @@ defmodule GiocciRelay.Server do
   @moduledoc """
   ## Examples
 
-      iex> GiocciRelay.Server.start_link([{:global, :relay}, {:global, :engine}])
+      iex> GiocciRelay.Server.start_link([{:global, :relay}, {:global, :engine}], :"engine@127.0.0.1")
 
   """
 

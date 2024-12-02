@@ -203,6 +203,75 @@ defmodule GiocciRelay.Server do
   end
 
   def rpc({rpc_engine, module, function, arity}) do
-    :rpc.call(rpc_engine, module, function, arity)
+    :rpc.call(rpc_engine, module, function, arity , 10000)
   end
+
+
+
+
+
+
+
+  def callback(m) do
+    # ここで時間のlogを取りたい？
+    msg = m |> String.trim        ##msgをバイナリからlistに変換
+      |> Base.decode64!
+      |> :erlang.binary_to_list
+    case msg do
+      [function_binary , arity_binary, :module_exec]=msg ->  ##module_execの場合
+        session = GenServer.call(__MODULE__, :call_session)
+        {:ok, publisher} = Session.declare_publisher(session, "to/engine")
+        Publisher.put(publisher , msg |> :erlang.term_to_binary() |> Base.encode64())
+
+      [encode_module , :module_save] = msg ->  ##module_saveの場合
+        session = GenServer.call(Giocci, :call_session)
+        {:ok, publisher} = Session.declare_publisher(session, "to/engine")
+        Publisher.put(publisher , msg |> :erlang.term_to_binary() |> Base.encode64())
+      _ =msg
+        IO.inspect("no match")
+    end
+  end
+
+
+  def callbacken(msg) do
+    session = GenServer.call(__MODULE__, :call_session)
+    {:ok, publisher} = Session.declare_publisher(session, "to/client")
+    Publisher.put(publisher , msg )
+  end
+
+  def start_link_session(state) do
+    GenServer.start_link(__MODULE__, state, name: Rsession)
+  end
+
+  def init(session) do
+    IO.inspect("pass")
+    {:ok, session}
+  end
+
+  def handle_call(:call_session, _from, session) do
+    {:reply, session, session}
+  end
+
+
+  def setup_relay do
+    ##ClientのZenohセッションを起動
+    {:ok,session} = Zenohex.open
+    ##GenServerにsession情報を保存
+    start_link_session(session)
+    ##ClientからRelay，EngineからRelayへののサブスクライブの準備
+    {:ok, subscribercl} = Zenohex.Session.declare_subscriber(session, "from/client/to/relay" )
+    {:ok, subscriberen} = Zenohex.Session.declare_subscriber(session, "from/engine/to/relay" )
+
+    Zenohex.Subscriber.recv_timeout(subscriberen,10000000)
+    Zenohex.Subscriber.recv_timeout(subscribercl,50000000)
+  end
+
+
+
+
+
+
+
+
+
 end

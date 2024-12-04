@@ -233,41 +233,102 @@ defmodule GiocciRelay.Server do
   end
 
 
-  def callbacken(msg) do
-    session = GenServer.call(__MODULE__, :call_session)
-    {:ok, publisher} = Session.declare_publisher(session, "to/client")
-    Publisher.put(publisher , msg )
+  def callbacken(state,m) do
+    %{
+      key_expr: erkey,
+      value: msg,
+      kind: kind,
+      reference: reference
+    } = m
+    # session = GenServer.call(ERSession, :call_session)
+    # {:ok, publisher} = Zenohex.Session.declare_publisher(session, "from/relay/to/client")
+    Zenonex.Publisher.put(state.publisher , msg )
   end
 
-  def start_link_session(state) do
-    GenServer.start_link(__MODULE__, state, name: Rsession)
+  @spec start_link_session_erc() ::
+          {:ok, %{callback: (any() -> any()), id: ERsession, subscriber: Zenohex.Subscriber.t()}}
+  def start_link_session_erc() do
+    ##RelayのZenohセッションを起動
+    {:ok,session} = Zenohex.open
+    {:ok, subscriber} = Zenohex.Session.declare_subscriber(session, "from/engine/to/relay")
+    {:ok, publisher} = Zenohex.Session.declare_publisher(session, "from/relay/to/client")
+    state = %{publisher: publisher, subscriber: subscriber, callback: &callbacken/2,id: ERsession,session: session}
+    GenServer.start_link(__MODULE__, state, name: ERsession)
+
+
+    recv_timeout(state)
+    {:ok, state}
   end
 
-  def init(session) do
-    IO.inspect("pass")
-    {:ok, session}
+  def start_link_session_cre() do
+    ##RelayのZenohセッションを起動
+    {:ok,session} = Zenohex.open
+    {:ok, subscriber} = Zenohex.Session.declare_subscriber(session,"from/client/to/relay")
+    state = %{subscriber: subscriber, callback: &IO.inspect/1 ,id: CRsession}
+    GenServer.start_link(__MODULE__, state, name: CRsession)
+
+    recv_timeout(state)
+    {:ok, state}
+
   end
 
-  def handle_call(:call_session, _from, session) do
-    {:reply, session, session}
+  # def init(session) do
+  #   IO.inspect("pass")
+  #   {:ok, session}
+  # end
+
+  def handle_call(:call_session, _from, state) do
+    session = state.session
+    {:reply, session, state}
+  end
+
+  def handle_info(:loop, state) do
+    IO.inspect("pass3")
+    recv_timeout(state)
+    {:noreply, state}
   end
 
 
   def setup_relay do
-    ##ClientのZenohセッションを起動
-    {:ok,session} = Zenohex.open
-    ##GenServerにsession情報を保存
-    start_link_session(session)
-    ##ClientからRelay，EngineからRelayへののサブスクライブの準備
-    {:ok, subscribercl} = Zenohex.Session.declare_subscriber(session, "from/client/to/relay" )
-    {:ok, subscriberen} = Zenohex.Session.declare_subscriber(session, "from/engine/to/relay" )
 
-    Zenohex.Subscriber.recv_timeout(subscriberen,10000000)
-    Zenohex.Subscriber.recv_timeout(subscribercl,50000000)
+    ##GenServerにsession情報を保存
+    {:ok, statee} = start_link_session_erc()
+    {:ok, statec} = start_link_session_cre()
+    # sessioncl = GenServer.call(CRsession,:call_session)
+    # sessionen = GenServer.call(ERsession,:call_session)
+    ##ClientからRelay，EngineからRelayへののサブスクライブの準備
+
+    # GenServer.cast(pide, {:sub_start,"from/client/to/relay"})
+    # {:ok, subscribercl} = Zenohex.Session.declare_subscriber(sessioncl, "from/client/to/relay" )
+    # {:ok, subscriberen} = Zenohex.Session.declare_subscriber(sessionen, "from/engine/to/relay" )
+
+    # {:ok, msg} = Zenohex.Subscriber.recv_timeout(subscriberen,10000000)
+    # {:ok, msg} = Zenohex.Subscriber.recv_timeout(subscribercl,50000000)
   end
 
 
 
+  defp recv_timeout(state) do
+
+
+
+    IO.inspect(state.id)
+
+
+    # GenServer.cast(ERsession, {:sub_start,"from/client/to/relay"})
+    case Zenohex.Subscriber.recv_timeout(state.subscriber,10000000) do
+      {:ok, sample} ->
+        state.callback.(state,sample)
+        send(state.id, :loop)
+
+      {:error, :timeout} ->
+        IO.inspect("pass")
+        send(state.id, :loop)
+
+      {:error, error} ->
+        Logger.error(inspect(error))
+    end
+  end
 
 
 

@@ -203,73 +203,95 @@ defmodule GiocciRelay.Server do
   end
 
   def rpc({rpc_engine, module, function, arity}) do
-    :rpc.call(rpc_engine, module, function, arity , 10000)
+    :rpc.call(rpc_engine, module, function, arity, 10000)
   end
 
-
-
-
-
-
-
-  def callback(m) do
+  def callbackcl(state, m) do
     # ここで時間のlogを取りたい？
-    msg = m |> String.trim        ##msgをバイナリからlistに変換
-      |> Base.decode64!
-      |> :erlang.binary_to_list
-    case msg do
-      [function_binary , arity_binary, :module_exec]=msg ->  ##module_execの場合
-        session = GenServer.call(__MODULE__, :call_session)
-        {:ok, publisher} = Session.declare_publisher(session, "to/engine")
-        Publisher.put(publisher , msg |> :erlang.term_to_binary() |> Base.encode64())
+    %{
+      key_expr: erkey,
+      value: msgint,
+      kind: kind,
+      reference: reference
+    } = m
 
-      [encode_module , :module_save] = msg ->  ##module_saveの場合
-        session = GenServer.call(Giocci, :call_session)
-        {:ok, publisher} = Session.declare_publisher(session, "to/engine")
-        Publisher.put(publisher , msg |> :erlang.term_to_binary() |> Base.encode64())
-      _ =msg
+    ## msgをバイナリからlistに変換
+    msg =
+      msgint
+      |> String.trim()
+      |> Base.decode64!()
+      |> :erlang.binary_to_term()
+
+    IO.inspect(msg)
+    # Zenohex.Publisher.put(state.publisher , msgint )
+    case msg do
+      ## module_execの場合
+      [_, _, _, :module_exec] = msg ->
+        Zenohex.Publisher.put(state.publisher, msgint)
+
+      ## module_saveの場合
+      [_, :module_save] = msg ->
+        Zenohex.Publisher.put(state.publisher, msgint)
+
+      # Publisher.put(publisher , msg |> :erlang.term_to_binary() |> Base.encode64())
+      _ = msg ->
         IO.inspect("no match")
     end
   end
 
-
-  def callbacken(state,m) do
+  def callbacken(state, m) do
     %{
       key_expr: erkey,
       value: msg,
       kind: kind,
       reference: reference
     } = m
+
     # session = GenServer.call(ERSession, :call_session)
     # {:ok, publisher} = Zenohex.Session.declare_publisher(session, "from/relay/to/client")
-    Zenonex.Publisher.put(state.publisher , msg )
+    Zenohex.Publisher.put(state.publisher, msg)
   end
 
   @spec start_link_session_erc() ::
-          {:ok, %{callback: (any() -> any()), id: ERsession, subscriber: Zenohex.Subscriber.t()}}
+          {:ok, %{callback: (any() -> any()), id: ERCsession, subscriber: Zenohex.Subscriber.t()}}
   def start_link_session_erc() do
-    ##RelayのZenohセッションを起動
-    {:ok,session} = Zenohex.open
+    ## RelayのZenohセッションを起動
+    {:ok, session} = Zenohex.open()
     {:ok, subscriber} = Zenohex.Session.declare_subscriber(session, "from/engine/to/relay")
     {:ok, publisher} = Zenohex.Session.declare_publisher(session, "from/relay/to/client")
-    state = %{publisher: publisher, subscriber: subscriber, callback: &callbacken/2,id: ERsession,session: session}
-    GenServer.start_link(__MODULE__, state, name: ERsession)
 
+    state = %{
+      publisher: publisher,
+      subscriber: subscriber,
+      callback: &callbacken/2,
+      id: ERCsession,
+      session: session
+    }
+
+    GenServer.start_link(__MODULE__, state, name: ERCsession)
 
     recv_timeout(state)
     {:ok, state}
   end
 
   def start_link_session_cre() do
-    ##RelayのZenohセッションを起動
-    {:ok,session} = Zenohex.open
-    {:ok, subscriber} = Zenohex.Session.declare_subscriber(session,"from/client/to/relay")
-    state = %{subscriber: subscriber, callback: &IO.inspect/1 ,id: CRsession}
-    GenServer.start_link(__MODULE__, state, name: CRsession)
+    ## RelayのZenohセッションを起動
+    {:ok, session} = Zenohex.open()
+    {:ok, subscriber} = Zenohex.Session.declare_subscriber(session, "from/client/to/relay")
+    {:ok, publisher} = Zenohex.Session.declare_publisher(session, "from/relay/to/engine")
+
+    state = %{
+      publisher: publisher,
+      subscriber: subscriber,
+      callback: &callbackcl/2,
+      id: CREsession,
+      session: session
+    }
+
+    GenServer.start_link(__MODULE__, state, name: CREsession)
 
     recv_timeout(state)
     {:ok, state}
-
   end
 
   # def init(session) do
@@ -283,20 +305,17 @@ defmodule GiocciRelay.Server do
   end
 
   def handle_info(:loop, state) do
-    IO.inspect("pass3")
     recv_timeout(state)
     {:noreply, state}
   end
 
-
   def setup_relay do
-
-    ##GenServerにsession情報を保存
+    ## GenServerにsession情報を保存
     {:ok, statee} = start_link_session_erc()
     {:ok, statec} = start_link_session_cre()
     # sessioncl = GenServer.call(CRsession,:call_session)
     # sessionen = GenServer.call(ERsession,:call_session)
-    ##ClientからRelay，EngineからRelayへののサブスクライブの準備
+    ## ClientからRelay，EngineからRelayへののサブスクライブの準備
 
     # GenServer.cast(pide, {:sub_start,"from/client/to/relay"})
     # {:ok, subscribercl} = Zenohex.Session.declare_subscriber(sessioncl, "from/client/to/relay" )
@@ -306,33 +325,21 @@ defmodule GiocciRelay.Server do
     # {:ok, msg} = Zenohex.Subscriber.recv_timeout(subscribercl,50000000)
   end
 
-
-
   defp recv_timeout(state) do
-
-
-
-    IO.inspect(state.id)
-
+    # IO.inspect(state.id)
 
     # GenServer.cast(ERsession, {:sub_start,"from/client/to/relay"})
-    case Zenohex.Subscriber.recv_timeout(state.subscriber,10000000) do
+    case Zenohex.Subscriber.recv_timeout(state.subscriber, 10_000_000) do
       {:ok, sample} ->
-        state.callback.(state,sample)
+        state.callback.(state, sample)
         send(state.id, :loop)
 
       {:error, :timeout} ->
-        IO.inspect("pass")
+        # IO.inspect("pass")
         send(state.id, :loop)
 
       {:error, error} ->
         Logger.error(inspect(error))
     end
   end
-
-
-
-
-
-
 end

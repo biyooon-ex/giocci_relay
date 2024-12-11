@@ -59,21 +59,6 @@ defmodule GiocciRelay.Server do
     {:reply, filter_list, state}
   end
 
-  # @impl true
-  # def handle_call({:module_save, encode_module}, _from, state) do
-  #   module_save_reply = module_save(state.node_engine, {:module_save, encode_module})
-
-  #   {:reply, module_save_reply, state}
-  # end
-
-  # @impl true
-  # def handle_call({:rpc, module, function, arity}, _from, state) do
-  #   rpc_engine = state.rpc_engine
-  #   rpc_reply = rpc({rpc_engine, module, function, arity})
-
-  #   {:reply, rpc_reply, state}
-  # end
-
   @impl true
   def handle_cast({:delete, vcontact_id}, state) do
     delete(state.node_engine, vcontact_id)
@@ -165,10 +150,6 @@ defmodule GiocciRelay.Server do
     GenServer.call(engine, :list)
   end
 
-  # def module_save(engine, {:module_save, encode_module}) do
-  #   GenServer.call(engine, {:module_save, encode_module})
-  # end
-
   def put(engine, vcontact_id, vcontact_element) do
     GenServer.cast(engine, {:put, vcontact_id, vcontact_element})
   end
@@ -202,13 +183,8 @@ defmodule GiocciRelay.Server do
     File.write("data/#{file_name}_detect_log.txt", log, [:append])
   end
 
-  # def rpc({rpc_engine, module, function, arity}) do
-  #   :rpc.call(rpc_engine, module, function, arity, 10000)
-  # end
-
   def callbackcl(state, m) do
     ## Clientから送られたデータを解析して、やりたい動作ごとに割り振る予定
-    # ここで時間のlogを取りたい？
     %{
       key_expr: erkey,
       value: msgint,
@@ -223,7 +199,6 @@ defmodule GiocciRelay.Server do
       |> Base.decode64!()
       |> :erlang.binary_to_term()
 
-    # IO.inspect(msg)
     case msg do
       ## module_execの場合
       [_, _, _, :module_exec] = msg ->
@@ -297,13 +272,6 @@ defmodule GiocciRelay.Server do
     {:ok, state}
   end
 
-  # def handle_call(:call_session, _from, state) do
-  #   ##現在は未使用だが、拡張これを使えば、新しくpubsubを建てられるはず？
-  #   session = state.session
-
-  #   {:reply, session, state}
-  # end
-
   def handle_info(:loop, state) do
     # subをループするhandle info
     recv_timeout(state)
@@ -319,7 +287,6 @@ defmodule GiocciRelay.Server do
 
   defp recv_timeout(state) do
     ## subを永続化する関数
-    # IO.inspect(state.id)
 
     case Zenohex.Subscriber.recv_timeout(state.subscriber, 10_000) do
       {:ok, sample} ->
@@ -327,7 +294,6 @@ defmodule GiocciRelay.Server do
         send(state.id, :loop)
 
       {:error, :timeout} ->
-        # IO.inspect("pass")
         send(state.id, :loop)
 
       {:error, error} ->

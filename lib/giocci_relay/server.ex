@@ -202,11 +202,11 @@ defmodule GiocciRelay.Server do
     case msg do
       ## module_execの場合
       [_, _, _, :module_exec] = msg ->
-        Zenohex.Publisher.put(state.publisher, msgint)
+        Zenohex.Publisher.put(state.publishercre, msgint)
 
       ## module_saveの場合
       [_, :module_save] = msg ->
-        Zenohex.Publisher.put(state.publisher, msgint)
+        Zenohex.Publisher.put(state.publishercre, msgint)
 
       _ = msg ->
         IO.inspect("no match")
@@ -222,79 +222,79 @@ defmodule GiocciRelay.Server do
       reference: reference
     } = m
 
-    Zenohex.Publisher.put(state.publisher, msg)
+    IO.inspect("1111")
+    Zenohex.Publisher.put(state.publishererc, msg)
   end
 
-  @spec start_link_session_erc() ::
+  @spec start_link() ::
           {:ok, %{callback: (any() -> any()), id: ERCsession, subscriber: Zenohex.Subscriber.t()}}
-  def start_link_session_erc() do
+  def start_link() do
     ## RelayのZenohセッションを起動
     {:ok, session} = Zenohex.open()
     ## pub,subそれぞれのキーをたてる
-    {:ok, subscriber} = Zenohex.Session.declare_subscriber(session, "from/engine/to/relay")
-    {:ok, publisher} = Zenohex.Session.declare_publisher(session, "from/relay/to/client")
+    {:ok, subscriber1} = Zenohex.Session.declare_subscriber(session, "from/engine/to/relay")
+    {:ok, publisher1} = Zenohex.Session.declare_publisher(session, "from/relay/to/client")
+    {:ok, subscriber2} = Zenohex.Session.declare_subscriber(session, "from/client/to/relay")
+    {:ok, publisher2} = Zenohex.Session.declare_publisher(session, "from/relay/to/engine")
     ## 状態として次の状態をもつ
     state = %{
-      publisher: publisher,
-      subscriber: subscriber,
-      callback: &callbacken/2,
-      id: ERCsession,
+      publishererc: publisher1,
+      subscribererc: subscriber1,
+      callbackerc: &callbacken/2,
+      publishercre: publisher2,
+      subscribercre: subscriber2,
+      callbackcre: &callbackcl/2,
+      id: ERCCREsession,
       session: session
     }
 
     ## 上記の状態を保存する用のGenServerの起動
-    GenServer.start_link(__MODULE__, state, name: ERCsession)
+    GenServer.start_link(__MODULE__, state, name: ERCCREsession)
 
     ## subの開始
-    recv_timeout(state)
+    recv_timeout_erc(state)
+    recv_timeout_cre(state)
     {:ok, state}
   end
 
-  def start_link_session_cre() do
-    ## RelayのZenohセッションを起動
-    {:ok, session} = Zenohex.open()
-    ## pub,subそれぞれのキーをたてる
-    {:ok, subscriber} = Zenohex.Session.declare_subscriber(session, "from/client/to/relay")
-    {:ok, publisher} = Zenohex.Session.declare_publisher(session, "from/relay/to/engine")
-    ## 状態として次の状態をもつ
-    state = %{
-      publisher: publisher,
-      subscriber: subscriber,
-      callback: &callbackcl/2,
-      id: CREsession,
-      session: session
-    }
-
-    ## 上記の状態を保存する用のGenServerの起動
-    GenServer.start_link(__MODULE__, state, name: CREsession)
-    ## subの開始
-    recv_timeout(state)
-    {:ok, state}
-  end
-
-  def handle_info(:loop, state) do
+  def handle_info(:loop_erc, state) do
     # subをループするhandle info
-    recv_timeout(state)
+    recv_timeout_erc(state)
     {:noreply, state}
   end
 
-  def setup_relay do
-    ## EngineからClientに返送するsubとpubをセットアップする
-    {:ok, statee} = start_link_session_erc()
-    ## ClientからEngineに返送するsubとpubをセットアップする
-    {:ok, statec} = start_link_session_cre()
+  def handle_info(:loop_cre, state) do
+    # subをループするhandle info
+    recv_timeout_cre(state)
+    {:noreply, state}
   end
 
-  defp recv_timeout(state) do
+  defp recv_timeout_erc(state) do
     ## subを永続化する関数
 
-    case Zenohex.Subscriber.recv_timeout(state.subscriber, 10_000) do
+    case Zenohex.Subscriber.recv_timeout(state.subscribererc, 10_000) do
       {:ok, sample} ->
-        state.callback.(state, sample)
-        send(state.id, :loop)
+        state.callbackerc.(state, sample)
+        send(state.id, :loop_erc)
 
       {:error, :timeout} ->
-        send(state.id, :loop)
+        send(state.id, :loop_erc)
+
+      {:error, error} ->
+        Logger.error(inspect(error))
+    end
+  end
+
+  defp recv_timeout_cre(state) do
+    ## subを永続化する関数
+
+    case Zenohex.Subscriber.recv_timeout(state.subscribercre, 10_000) do
+      {:ok, sample} ->
+        state.callbackcre.(state, sample)
+        send(state.id, :loop_cre)
+
+      {:error, :timeout} ->
+        send(state.id, :loop_cre)
 
       {:error, error} ->
         Logger.error(inspect(error))

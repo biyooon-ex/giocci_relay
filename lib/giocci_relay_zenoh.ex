@@ -10,6 +10,7 @@ defmodule GiocciRelayZenoh do
   require Logger
 
   def setup_relay do
+    ## 最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定）
     engine_number_string = System.get_env("NODE_ENGINE_NUMBER")
     engine_number = String.to_integer(engine_number_string)
     create_session(engine_number)
@@ -116,6 +117,7 @@ defmodule GiocciRelayZenoh do
   end
 
   defp create_session(n) do
+    ## セッションをｎ個作る関数
     number = Integer.to_string(n)
     engine_name = System.get_env("NODE_ENGINE_NAME" <> number)
     start_link(engine_name, number)

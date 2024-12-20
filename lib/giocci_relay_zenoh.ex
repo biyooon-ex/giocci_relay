@@ -2,22 +2,20 @@ defmodule GiocciRelayZenoh do
   @moduledoc """
   ## Examples
 
-      iex> GiocciRelay.Server.start_link([{:global, :relay}, {:global, :engine}], :"engine@127.0.0.1")
+      iex> GiocciRelayZenoh.setup_relay()
 
   """
 
   use GenServer
   require Logger
 
-  def setup_relay do
+  def setup_relay() do
     ## 最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定）
-    engine_number_string = System.get_env("NODE_ENGINE_NUMBER")
-    engine_number = String.to_integer(engine_number_string)
-    create_session(engine_number)
+    System.get_env("NODE_ENGINE_NUMBER")
+    |> String.to_integer()
+    |> create_session()
   end
 
-  @spec start_link(any(), any()) ::
-          {:ok, %{callback: (any() -> any()), id: ERCsession, subscriber: Zenohex.Subscriber.t()}}
   def start_link(engine_name, number) do
     relay_name = System.get_env("MY_NODE_NAME")
     client_name = System.get_env("NODE_CLIENT_NAME1")
@@ -36,28 +34,35 @@ defmodule GiocciRelayZenoh do
     {:ok, publisher2} =
       Zenohex.Session.declare_publisher(session, "from/" <> relay_name <> "/to/" <> engine_name)
 
-    id_string = "Engine2Relay2ClientandClient2Relay2Enginesession" <> number
+    id_string = "Relay" <> number
     ## 状態として次の状態をもつ
     state = %{
-      publisher_Engine2Relay2Client: publisher1,
-      subscriber_Engine2Relay2Client: subscriber1,
-      callback_Engine2Relay2Client: &callback_fromengine/2,
-      publisher_Client2Relay2Engine: publisher2,
-      subscriber_Client2Relay2Engine: subscriber2,
-      callback_Client2Relay2Engine: &callback_fromclient/2,
+      publisher_relay2client: publisher1,
+      subscriber_engine2relay: subscriber1,
+      callback_engine2relay: &callback_fromengine/2,
+      publisher_relay2engine: publisher2,
+      subscriber_client2relay: subscriber2,
+      callback_client2relay: &callback_fromclient/2,
       id: String.to_atom(id_string),
       session: session
     }
 
     ## 上記の状態を保存する用のGenServerの起動
     GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
-    IO.inspect("from/" <> relay_name <> "/to/" <> engine_name)
+    Logger.info("from/" <> relay_name <> "/to/" <> engine_name)
     ## subの開始
-    recv_timeout_Engine2Relay2Client(state)
-    recv_timeout_Client2Relay2Engine(state)
+    subscriber_loop_engine2relay(state)
+    subscriber_loop_client2relay(state)
     {:ok, state}
   end
 
+  @spec callback_fromclient(any(), %{
+          :key_expr => any(),
+          :kind => any(),
+          :reference => any(),
+          :value => binary(),
+          optional(any()) => any()
+        }) :: any()
   def callback_fromclient(state, message) do
     ## Clientから送られたデータを解析して、やりたい動作ごとに割り振る予定
     %{
@@ -68,47 +73,47 @@ defmodule GiocciRelayZenoh do
     } = message
 
     ## msgをバイナリからlistにもどす
-    readable_msg =
+    message_readable =
       message_intermediate
       |> String.trim()
       |> Base.decode64!()
       |> :erlang.binary_to_term()
 
-    case readable_msg do
+    case message_readable do
       ## module_execの場合
-      [_, _, _, :module_exec] = readable_msg ->
-        Zenohex.Publisher.put(state.publisher_Client2Relay2Engine, message_intermediate)
+      [_, _, _, :module_exec] = message_readable ->
+        Zenohex.Publisher.put(state.publisher_relay2engine, message_intermediate)
 
       ## module_saveの場合
-      [_, :module_save] = readable_msg ->
-        Zenohex.Publisher.put(state.publisher_Client2Relay2Engine, message_intermediate)
+      [_, :module_save] = message_readable ->
+        Zenohex.Publisher.put(state.publisher_relay2engine, message_intermediate)
 
-      _ = readable_msg ->
-        IO.inspect("no match")
+      _ = message_readable ->
+        Logger.error(inspect("no match"))
     end
   end
 
-  def callback_fromengine(state, m) do
+  def callback_fromengine(state, message) do
     ## 　Engineから送られたメッセージを抽出し、Clientに返送
     %{
       key_expr: erkey,
-      value: msg,
+      value: message_intermediate,
       kind: kind,
       reference: reference
-    } = m
+    } = message
 
-    Zenohex.Publisher.put(state.publisher_Engine2Relay2Client, msg)
+    Zenohex.Publisher.put(state.publisher_relay2client, message_intermediate)
   end
 
-  def handle_info(:loop_Engine2Relay2Client, state) do
+  def handle_info(:loop_engine2relay, state) do
     # subをループするhandle info
-    recv_timeout_Engine2Relay2Client(state)
+    subscriber_loop_engine2relay(state)
     {:noreply, state}
   end
 
-  def handle_info(:loop_Client2Relay2Engine, state) do
+  def handle_info(:loop_client2relay, state) do
     # subをループするhandle info
-    recv_timeout_Client2Relay2Engine(state)
+    subscriber_loop_client2relay(state)
     {:noreply, state}
   end
 
@@ -124,32 +129,32 @@ defmodule GiocciRelayZenoh do
     create_session(n - 1)
   end
 
-  defp recv_timeout_Engine2Relay2Client(state) do
+  defp subscriber_loop_engine2relay(state) do
     ## subを永続化する関数
 
-    case Zenohex.Subscriber.recv_timeout(state.subscriber_Engine2Relay2Client, 10_000) do
+    case Zenohex.Subscriber.recv_timeout(state.subscriber_engine2relay, 10_000) do
       {:ok, sample} ->
-        state.callback_Engine2Relay2Client.(state, sample)
-        send(state.id, :loop_Engine2Relay2Client)
+        state.callback_engine2relay.(state, sample)
+        send(state.id, :loop_engine2relay)
 
       {:error, :timeout} ->
-        send(state.id, :loop_Engine2Relay2Client)
+        send(state.id, :loop_engine2relay)
 
       {:error, error} ->
         Logger.error(inspect(error))
     end
   end
 
-  defp recv_timeout_Client2Relay2Engine(state) do
+  defp subscriber_loop_client2relay(state) do
     ## subを永続化する関数
 
-    case Zenohex.Subscriber.recv_timeout(state.subscriber_Client2Relay2Engine, 10_000) do
+    case Zenohex.Subscriber.recv_timeout(state.subscriber_client2relay, 10_000) do
       {:ok, sample} ->
-        state.callback_Client2Relay2Engine.(state, sample)
-        send(state.id, :loop_Client2Relay2Engine)
+        state.callback_client2relay.(state, sample)
+        send(state.id, :loop_client2relay)
 
       {:error, :timeout} ->
-        send(state.id, :loop_Client2Relay2Engine)
+        send(state.id, :loop_client2relay)
 
       {:error, error} ->
         Logger.error(inspect(error))

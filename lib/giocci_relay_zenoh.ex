@@ -8,17 +8,28 @@ defmodule GiocciRelayZenoh do
 
   use GenServer
   require Logger
+  use Application
 
   def setup_relay() do
     ## 最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定）
-    System.get_env("NODE_ENGINE_NUMBER")
-    |> String.to_integer()
-    |> create_session()
+    create_session(Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_node_name])
   end
 
-  def start_link(engine_name, number) do
-    relay_name = System.get_env("MY_NODE_NAME")
-    client_name = System.get_env("NODE_CLIENT_NAME1")
+  @spec start_link(binary()) ::
+          {:ok,
+           %{
+             callback_client2relay: (any(), map() -> :ok | {any(), any()}),
+             callback_engine2relay: (any(), map() -> :ok | {any(), any()}),
+             id: atom(),
+             publisher_relay2client: reference(),
+             publisher_relay2engine: reference(),
+             session: reference(),
+             subscriber_client2relay: Zenohex.Subscriber.t(),
+             subscriber_engine2relay: Zenohex.Subscriber.t()
+           }}
+  def start_link(engine_name) do
+    relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
+    client_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:client_node_name]
     ## RelayのZenohセッションを起動
     {:ok, session} = Zenohex.open()
     ## pub,subそれぞれのキーをたてる
@@ -34,7 +45,7 @@ defmodule GiocciRelayZenoh do
     {:ok, publisher2} =
       Zenohex.Session.declare_publisher(session, "from/" <> relay_name <> "/to/" <> engine_name)
 
-    id_string = "Relay" <> number
+    id_string = client_name <> engine_name
     ## 状態として次の状態をもつ
     state = %{
       publisher_relay2client: publisher1,
@@ -117,16 +128,15 @@ defmodule GiocciRelayZenoh do
     {:noreply, state}
   end
 
-  defp create_session(0) do
+  defp create_session([]) do
     :ok
   end
 
-  defp create_session(n) do
-    ## セッションをｎ個作る関数
-    number = Integer.to_string(n)
-    engine_name = System.get_env("NODE_ENGINE_NAME" <> number)
-    start_link(engine_name, number)
-    create_session(n - 1)
+  defp create_session(engine_list) do
+    ## セッションを作る関数
+    [engine_name | tail] = engine_list
+    start_link(engine_name)
+    create_session(tail)
   end
 
   defp subscriber_loop_engine2relay(state) do

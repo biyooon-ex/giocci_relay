@@ -7,9 +7,16 @@ defmodule GiocciRelay.Application do
 
   @impl true
   def start(_type, _args) do
-    {my_process_name, _} = System.get_env("MY_PROCESS_NAME") |> Code.eval_string()
-    {node_engine_name, _} = System.get_env("NODE_ENGINE_NAME") |> Code.eval_string()
-    rpc_engine_name = System.get_env("RPC_ENGINE_NAME") |> String.to_atom()
+    {my_process_name, _} =
+      Application.get_env(:giocci_relay, :system_variables)[:my_process_name]
+      |> Code.eval_string()
+
+    {node_engine_name, _} =
+      Application.get_env(:giocci_relay, :system_variables)[:node_engine_name]
+      |> Code.eval_string()
+
+    rpc_engine_name =
+      Application.get_env(:giocci_relay, :system_variables)[:rpc_engine_name] |> String.to_atom()
 
     children = [
       # Starts a worker by calling: GiocciRelay.Worker.start_link(arg)

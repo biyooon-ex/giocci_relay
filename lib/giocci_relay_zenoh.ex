@@ -67,13 +67,6 @@ defmodule GiocciRelayZenoh do
     {:ok, state}
   end
 
-  @spec callback_fromclient(any(), %{
-          :key_expr => any(),
-          :kind => any(),
-          :reference => any(),
-          :value => binary(),
-          optional(any()) => any()
-        }) :: any()
   def callback_fromclient(state, message) do
     ## Clientから送られたデータを解析して、やりたい動作ごとに割り振る予定
     %{
@@ -104,12 +97,8 @@ defmodule GiocciRelayZenoh do
     end
   end
 
-  @doc """
-  Engineから送られたメッセージを抽出し、Clientに返送
-
-  """
-
   def callback_fromengine(state, message) do
+    ## Engineから送られたメッセージを抽出し、Clientに返送
     %{
       key_expr: erkey,
       value: message_intermediate,
@@ -122,7 +111,6 @@ defmodule GiocciRelayZenoh do
 
   @doc """
   subをループするhandle info
-
   """
 
   def handle_info(:loop_engine2relay, state) do
@@ -133,7 +121,6 @@ defmodule GiocciRelayZenoh do
 
   @doc """
   subをループするhandle info
-
   """
 
   def handle_info(:loop_client2relay, state) do
@@ -145,11 +132,6 @@ defmodule GiocciRelayZenoh do
     :ok
   end
 
-  @doc """
-    セッションを作る関数
-
-  """
-
   defp create_session(engine_list) do
     ## セッションを作る関数
     [engine_name | tail] = engine_list
@@ -157,12 +139,8 @@ defmodule GiocciRelayZenoh do
     create_session(tail)
   end
 
-  @doc """
-  subを永続化する関数
-
-  """
-
   defp subscriber_loop_engine2relay(state) do
+    ## subを永続化する関数
     case Zenohex.Subscriber.recv_timeout(state.subscriber_engine2relay, 10_000) do
       {:ok, sample} ->
         state.callback_engine2relay.(state, sample)
@@ -179,12 +157,8 @@ defmodule GiocciRelayZenoh do
     end
   end
 
-  @doc """
-  subを永続化する関数
-
-  """
-
   defp subscriber_loop_client2relay(state) do
+    ## subを永続化する関数
     case Zenohex.Subscriber.recv_timeout(state.subscriber_client2relay, 10_000) do
       {:ok, sample} ->
         state.callback_client2relay.(state, sample)

@@ -10,8 +10,11 @@ defmodule GiocciRelayZenoh do
   require Logger
   use Application
 
+  @doc """
+    最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定
+  """
+
   def setup_relay() do
-    ## 最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定）
     create_session(Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_node_name])
   end
 
@@ -67,8 +70,8 @@ defmodule GiocciRelayZenoh do
     {:ok, state}
   end
 
+  ## Clientから送られたデータを解析して、やりたい動作ごとに割り振る予定
   def callback_fromclient(state, message) do
-    ## Clientから送られたデータを解析して、やりたい動作ごとに割り振る予定
     %{
       key_expr: erkey,
       value: message_intermediate,
@@ -97,8 +100,8 @@ defmodule GiocciRelayZenoh do
     end
   end
 
+  ## Engineから送られたメッセージを抽出し、Clientに返送
   def callback_fromengine(state, message) do
-    ## Engineから送られたメッセージを抽出し、Clientに返送
     %{
       key_expr: erkey,
       value: message_intermediate,
@@ -109,20 +112,13 @@ defmodule GiocciRelayZenoh do
     Zenohex.Publisher.put(state.publisher_relay2client, message_intermediate)
   end
 
-  @doc """
-  subをループするhandle info
-  """
-
+  ##   subをループするhandle info
   def handle_info(:loop_engine2relay, state) do
-    # subをループするhandle info
     subscriber_loop_engine2relay(state)
     {:noreply, state}
   end
 
-  @doc """
-  subをループするhandle info
-  """
-
+  ##   subをループするhandle info
   def handle_info(:loop_client2relay, state) do
     subscriber_loop_client2relay(state)
     {:noreply, state}
@@ -132,15 +128,15 @@ defmodule GiocciRelayZenoh do
     :ok
   end
 
+  ## セッションを作る関数
   defp create_session(engine_list) do
-    ## セッションを作る関数
     [engine_name | tail] = engine_list
     start_link(engine_name)
     create_session(tail)
   end
 
+  ## subを永続化する関数
   defp subscriber_loop_engine2relay(state) do
-    ## subを永続化する関数
     case Zenohex.Subscriber.recv_timeout(state.subscriber_engine2relay, 10_000) do
       {:ok, sample} ->
         state.callback_engine2relay.(state, sample)
@@ -157,8 +153,8 @@ defmodule GiocciRelayZenoh do
     end
   end
 
+  ## subを永続化する関数
   defp subscriber_loop_client2relay(state) do
-    ## subを永続化する関数
     case Zenohex.Subscriber.recv_timeout(state.subscriber_client2relay, 10_000) do
       {:ok, sample} ->
         state.callback_client2relay.(state, sample)

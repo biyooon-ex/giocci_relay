@@ -13,23 +13,10 @@ defmodule GiocciRelayZenoh do
   @doc """
     最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定
   """
-
   def setup_relay() do
     create_session(Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_node_name])
   end
 
-  @spec start_link(binary()) ::
-          {:ok,
-           %{
-             callback_client2relay: (any(), map() -> :ok | {any(), any()}),
-             callback_engine2relay: (any(), map() -> :ok | {any(), any()}),
-             id: atom(),
-             publisher_relay2client: reference(),
-             publisher_relay2engine: reference(),
-             session: reference(),
-             subscriber_client2relay: Zenohex.Subscriber.t(),
-             subscriber_engine2relay: Zenohex.Subscriber.t()
-           }}
   def start_link(engine_name) do
     relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
     client_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:client_node_name]
@@ -70,7 +57,7 @@ defmodule GiocciRelayZenoh do
     {:ok, state}
   end
 
-  ## Clientから送られたデータを解析して、やりたい動作ごとに割り振る予定
+  ## Clientから送られたデータを解析して、やりたい動作ごとに割り振るコールバック関数
   def callback_fromclient(state, message) do
     %{
       key_expr: erkey,

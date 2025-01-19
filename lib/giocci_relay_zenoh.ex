@@ -59,12 +59,7 @@ defmodule GiocciRelayZenoh do
 
   ## Clientから送られたデータを解析して、やりたい動作ごとに割り振るコールバック関数
   def callback_fromclient(state, message) do
-    %{
-      key_expr: erkey,
-      value: message_intermediate,
-      kind: kind,
-      reference: reference
-    } = message
+    %{value: message_intermediate} = message
 
     ## msgをバイナリからlistにもどす
     message_readable =
@@ -89,12 +84,7 @@ defmodule GiocciRelayZenoh do
 
   ## Engineから送られたメッセージを抽出し、Clientに返送
   def callback_fromengine(state, message) do
-    %{
-      key_expr: erkey,
-      value: message_intermediate,
-      kind: kind,
-      reference: reference
-    } = message
+    %{value: message_intermediate} = message
 
     Zenohex.Publisher.put(state.publisher_relay2client, message_intermediate)
   end

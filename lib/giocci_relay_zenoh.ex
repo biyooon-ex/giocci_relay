@@ -70,14 +70,14 @@ defmodule GiocciRelayZenoh do
 
     case message_readable do
       ## module_execの場合
-      [_, _, _, :module_exec] = message_readable ->
+      [_, _, _, :module_exec] ->
         Zenohex.Publisher.put(state.publisher_relay2engine, message_intermediate)
 
       ## module_saveの場合
-      [_, :module_save] = message_readable ->
+      [_, :module_save] ->
         Zenohex.Publisher.put(state.publisher_relay2engine, message_intermediate)
 
-      _ = message_readable ->
+      _ ->
         Logger.error(inspect("no match"))
     end
   end

@@ -27,3 +27,6 @@ giocci_relay-*.tar
 
 # color theme
 .vscode/settings.json
+
+# setting for Giocci
+.env

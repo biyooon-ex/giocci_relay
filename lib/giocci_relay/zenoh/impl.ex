@@ -51,7 +51,7 @@ defmodule GiocciRelay.Zenoh.Impl do
     engine = Map.get(sample_decoded, "engine") |> to_string()
 
     Logger.info(
-      "Relay: #{Application.fetch_env!(:giocci_relay, :system_variables)[:my_node_name]} to #{engine}"
+      "Relay: from #{Application.fetch_env!(:giocci_relay, :system_variables)[:my_node_name]} to #{engine}"
     )
 
     Publisher.put(publishers[engine], sample.value)

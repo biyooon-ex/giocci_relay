@@ -123,10 +123,7 @@ defmodule GiocciRelayZenoh do
         send(state.id, :loop_engine2relay)
 
       {:error, error} ->
-        Logger.error(inspect(error))
-
-      {_, _} ->
-        Logger.error("unexpected error")
+        Logger.error("unexpected error: #{error}")
     end
   end
 
@@ -141,10 +138,7 @@ defmodule GiocciRelayZenoh do
         send(state.id, :loop_client2relay)
 
       {:error, error} ->
-        Logger.error(inspect(error))
-
-      {_, _} ->
-        Logger.error("unexpected error")
+        Logger.error("unexpected error: #{error}")
     end
   end
 end

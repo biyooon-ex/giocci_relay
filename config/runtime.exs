@@ -22,6 +22,7 @@ config :giocci_relay, :system_variables,
       "[\"engine1\", \"engine2\", \"engine3\", \"engine4\", \"engine5\"]"
     )
     |> Code.eval_string()
-    |> elem(0)
+    |> elem(0),
+  key_space: env!("KEY_SPACE", :string, "")
 
 # import_config "#{config_env()}.exs"

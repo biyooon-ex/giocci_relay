@@ -20,6 +20,7 @@ defmodule GiocciRelay.Application do
 
     children = [
       # Starts a worker by calling: GiocciRelay.Worker.start_link(arg)
+      GiocciRelay.Zenoh,
       {GiocciRelay.Server, [my_process_name, node_engine_name, rpc_engine_name]}
     ]
 

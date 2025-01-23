@@ -51,7 +51,7 @@ defmodule GiocciRelay.Zenoh.Impl do
     sample_decoded = :erlang.binary_to_term(sample.value)
     engine = Map.get(sample_decoded, "engine") |> to_string()
     magic_number = Map.get(sample_decoded, "magic_number") |> to_string()
-    pub_key = key_space <> engine <> "/" <> magic_number
+    pub_key = key_space <> "engine/" <> engine <> "/" <> magic_number
 
     {:ok, publisher} = Session.declare_publisher(session, pub_key)
 

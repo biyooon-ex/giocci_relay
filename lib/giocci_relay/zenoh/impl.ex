@@ -13,15 +13,15 @@ defmodule GiocciRelay.Zenoh.Impl do
 
   def init(_args) do
     my_node_name = Application.fetch_env!(:giocci_relay, :system_variables)[:my_node_name]
-    engines = Application.get_env(:giocci_relay, :system_variables)[:engine_node_name]
     key_space = Application.fetch_env!(:giocci_relay, :system_variables)[:key_space]
 
     {:ok, session} = Zenohex.open()
-    {:ok, publishers} = create_publishers(session, engines, key_space)
-    {:ok, subscriber} = Session.declare_subscriber(session, key_space <> "relay/" <> my_node_name)
+
+    {:ok, subscriber} =
+      Session.declare_subscriber(session, key_space <> "relay/" <> my_node_name <> "/*")
 
     ## 状態として次の状態をもつ
-    state = %{publishers: publishers, subscriber: subscriber}
+    state = %{session: session, subscriber: subscriber}
 
     recv_timeout(state)
     {:ok, state}
@@ -35,7 +35,7 @@ defmodule GiocciRelay.Zenoh.Impl do
   defp recv_timeout(state) do
     case Subscriber.recv_timeout(state.subscriber) do
       {:ok, sample} ->
-        detect(sample, state.publishers)
+        detect(sample, state.session)
         send(self(), :loop)
 
       {:error, :timeout} ->
@@ -46,26 +46,19 @@ defmodule GiocciRelay.Zenoh.Impl do
     end
   end
 
-  defp detect(sample, publishers) do
+  defp detect(sample, session) do
+    key_space = Application.fetch_env!(:giocci_relay, :system_variables)[:key_space]
     sample_decoded = :erlang.binary_to_term(sample.value)
     engine = Map.get(sample_decoded, "engine") |> to_string()
+    magic_number = Map.get(sample_decoded, "magic_number") |> to_string()
+    pub_key = key_space <> "engine/" <> engine <> "/" <> magic_number
+
+    {:ok, publisher} = Session.declare_publisher(session, pub_key)
 
     Logger.info(
       "Relay: from #{Application.fetch_env!(:giocci_relay, :system_variables)[:my_node_name]} to #{engine}"
     )
 
-    Publisher.put(publishers[engine], sample.value)
-  end
-
-  defp create_publishers(session, engines, key_space) do
-    publishers =
-      Enum.map(engines, fn engine ->
-        key = key_space <> "engine/" <> engine
-        {:ok, publisher} = Session.declare_publisher(session, key)
-        {engine, publisher}
-      end)
-      |> Enum.into(%{})
-
-    {:ok, publishers}
+    Publisher.put(publisher, sample.value)
   end
 end

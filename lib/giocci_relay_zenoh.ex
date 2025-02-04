@@ -8,7 +8,6 @@ defmodule GiocciRelayZenoh do
 
   use GenServer
   require Logger
-  use Application
 
   @doc """
     最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定

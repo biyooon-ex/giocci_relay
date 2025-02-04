@@ -57,6 +57,10 @@ defmodule GiocciRelayZenoh do
     {:ok, state}
   end
 
+  def init(init_arg) do
+    {:ok, init_arg}
+  end
+
   ## Clientから送られたデータを解析して、やりたい動作ごとに割り振るコールバック関数
   def callback_fromclient(state, message) do
     ## msgをバイナリからlistにもどす

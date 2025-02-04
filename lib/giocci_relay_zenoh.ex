@@ -59,43 +59,30 @@ defmodule GiocciRelayZenoh do
 
   ## Clientから送られたデータを解析して、やりたい動作ごとに割り振るコールバック関数
   def callback_fromclient(state, message) do
-    %{
-      key_expr: erkey,
-      value: message_intermediate,
-      kind: kind,
-      reference: reference
-    } = message
-
     ## msgをバイナリからlistにもどす
     message_readable =
-      message_intermediate
+      Map.get(message, :value)
       |> String.trim()
       |> Base.decode64!()
       |> :erlang.binary_to_term()
 
     case message_readable do
       ## module_execの場合
-      [_, _, _, :module_exec] = message_readable ->
-        Zenohex.Publisher.put(state.publisher_relay2engine, message_intermediate)
+      [_, _, _, :module_exec] ->
+        Zenohex.Publisher.put(state.publisher_relay2engine, Map.get(message, :value))
 
       ## module_saveの場合
-      [_, :module_save] = message_readable ->
-        Zenohex.Publisher.put(state.publisher_relay2engine, message_intermediate)
+      [_, :module_save] ->
+        Zenohex.Publisher.put(state.publisher_relay2engine, Map.get(message, :value))
 
-      _ = message_readable ->
+      _ ->
         Logger.error(inspect("no match"))
     end
   end
 
   ## Engineから送られたメッセージを抽出し、Clientに返送
   def callback_fromengine(state, message) do
-    %{
-      key_expr: erkey,
-      value: message_intermediate,
-      kind: kind,
-      reference: reference
-    } = message
-
+    message_intermediate = Map.get(message, :message_intermediate)
     Zenohex.Publisher.put(state.publisher_relay2client, message_intermediate)
   end
 

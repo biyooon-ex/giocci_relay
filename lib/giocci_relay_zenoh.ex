@@ -13,12 +13,12 @@ defmodule GiocciRelayZenoh do
     最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定
   """
   def setup_relay() do
-    create_session(Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_node_name])
+    create_session(engine_node_name())
   end
 
   def start_link(engine_name) do
-    relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
-    client_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:client_node_name]
+    relay_name = my_node_name()
+    client_name = client_node_name()
     ## RelayのZenohセッションを起動
     {:ok, session} = Zenohex.open()
     ## pub,subそれぞれのキーをたてる
@@ -147,4 +147,13 @@ defmodule GiocciRelayZenoh do
         Logger.error("unexpected error")
     end
   end
+
+  defp my_node_name(),
+    do: Application.fetch_env!(:giocci_relay, :giocci_relay_zenoh)[:my_node_name]
+
+  defp engine_node_name(),
+    do: Application.fetch_env!(:giocci_relay, :giocci_relay_zenoh)[:engine_node_name]
+
+  defp client_node_name(),
+    do: Application.fetch_env!(:giocci_relay, :giocci_relay_zenoh)[:client_node_name]
 end

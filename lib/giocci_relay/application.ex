@@ -15,8 +15,8 @@ defmodule GiocciRelay.Application do
       Application.get_env(:giocci_relay, :system_variables)[:node_engine_name]
       |> Code.eval_string()
 
-    rpc_engine_name =
-      Application.get_env(:giocci_relay, :system_variables)[:rpc_engine_name] |> String.to_atom()
+    ## durty fix: avoid errors caused by removed variables
+    rpc_engine_name = "engine1"
 
     children = [
       # Starts a worker by calling: GiocciRelay.Worker.start_link(arg)

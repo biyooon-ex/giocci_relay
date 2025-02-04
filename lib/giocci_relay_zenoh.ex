@@ -14,67 +14,36 @@ defmodule GiocciRelayZenoh do
     最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定
   """
   def setup_relay() do
+    create_clientsession(
+      Application.get_env(:giocci_relay_zenoh, :system_variables)[:client_node_name]
+    )
+
+    create_session(Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_node_name])
+  end
+
+  def start_link(engine_name) do
     relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
-    client_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:client_node_name]
     ## RelayのZenohセッションを起動
     {:ok, session} = Zenohex.open()
-    ## pub,subそれぞれのキーをたてる
 
-    {:ok, subscriber} =
-      Zenohex.Session.declare_subscriber(
-        session,
-        "key_prefix/giocci/client_to_relay/" <> relay_name
-      )
-
-    id_string = relay_name <> "sub from client"
-    ## 状態として次の状態をもつ
-    state = %{
-      subscriber_client2relay: subscriber,
-      callback_client2relay: &callback_fromclient/2,
-      id: String.to_atom(id_string),
-      session: session
-    }
-
-    ## 上記の状態を保存する用のGenServerの起動
-    GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
-    Logger.info("key_prefix/giocci/client_to_relay/" <> relay_name)
-    ## subの開始
-    subscriber_loop_client2relay(state)
-    {:ok, state}
-
-    {:ok, session} = Zenohex.open()
-    ## pub,subそれぞれのキーをたてる
-
-    {:ok, publisher} =
-      Zenohex.Session.declare_publisher(
-        session,
-        "key_prefix/giocci/relay_to_client/" <> client_name
-      )
-
-    id_string = client_name <> relay_name <> "pub"
-    ## 状態として次の状態をもつ
-    state = %{
-      publisher_relay2client: publisher,
-      id: String.to_atom(id_string),
-      session: session
-    }
-
-    ## 上記の状態を保存する用のGenServerの起動
-    GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
-    ## subの開始
-    {:ok, state}
-
-    {:ok, session} = Zenohex.open()
     ## subのキーをたてる
     {:ok, subscriber} =
       Zenohex.Session.declare_subscriber(
         session,
-        "key_prefix/giocci/engine_to_relay/" <> relay_name
+        "key_prefix/giocci/engine_to_relay/" <> engine_name <> "/" <> relay_name
       )
 
-    id_string = relay_name <> "sub from engine"
+    ## pubキーをたてる
+    {:ok, publisher} =
+      Zenohex.Session.declare_publisher(
+        session,
+        "key_prefix/giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name
+      )
+
+    id_string = relay_name <> engine_name
     ## 状態として次の状態をもつ
     state = %{
+      publisher_relay2engine: publisher,
       subscriber_engine2relay: subscriber,
       callback_engine2relay: &callback_fromengine/2,
       id: String.to_atom(id_string),
@@ -83,38 +52,9 @@ defmodule GiocciRelayZenoh do
 
     ## 上記の状態を保存する用のGenServerの起動
     GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
+    Logger.info("key_prefix/giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name)
     ## subの開始
     subscriber_loop_engine2relay(state)
-    {:ok, state}
-
-    create_session(Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_node_name])
-  end
-
-  def start_link(engine_name) do
-    relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
-    client_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:client_node_name]
-    ## RelayのZenohセッションを起動
-    {:ok, session} = Zenohex.open()
-    ## pubキーをたてる
-
-    {:ok, publisher} =
-      Zenohex.Session.declare_publisher(
-        session,
-        "key_prefix/giocci/relay_to_engine/" <> engine_name
-      )
-
-    id_string = relay_name <> engine_name <> "pub"
-    ## 状態として次の状態をもつ
-    state = %{
-      publisher_relay2engine: publisher,
-      id: String.to_atom(id_string),
-      session: session
-    }
-
-    ## 上記の状態を保存する用のGenServerの起動
-    GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
-    Logger.info("key_prefix/giocci/relay_to_engine/" <> engine_name)
-    ## subの開始
     {:ok, state}
   end
 
@@ -141,7 +81,7 @@ defmodule GiocciRelayZenoh do
         engine_name_tosend =
           Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_name_tosend]
 
-        id = (relay_name <> engine_name_tosend <> "pub") |> String.to_atom()
+        id = (relay_name <> engine_name_tosend) |> String.to_atom()
         ## publisherをセッションから作成しpublishする
         [publisher] =
           GenServer.call(id, :call_publisher_toengine)
@@ -153,7 +93,7 @@ defmodule GiocciRelayZenoh do
         engine_name_tosend =
           Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_name_tosend]
 
-        id = (relay_name <> engine_name_tosend <> "pub") |> String.to_atom()
+        id = (relay_name <> engine_name_tosend) |> String.to_atom()
         ## publisherをセッションから作成しpublishする
         [publisher] =
           GenServer.call(id, :call_publisher_toengine)
@@ -179,7 +119,7 @@ defmodule GiocciRelayZenoh do
     client_name_tosend =
       Application.get_env(:giocci_relay_zenoh, :system_variables)[:client_name_tosend]
 
-    id = (client_name_tosend <> relay_name <> "pub") |> String.to_atom()
+    id = (client_name_tosend <> relay_name) |> String.to_atom()
     ## publisherをセッションから作成しpublishする
     [publisher] =
       GenServer.call(id, :call_publisher_toclient)
@@ -207,6 +147,43 @@ defmodule GiocciRelayZenoh do
   def handle_info(:loop_client2relay, state) do
     subscriber_loop_client2relay(state)
     {:noreply, state}
+  end
+
+  defp create_clientsession(client_name) do
+    relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
+    ## RelayのZenohセッションを起動
+    {:ok, session} = Zenohex.open()
+
+    ## pub,subそれぞれのキーをたてる
+
+    {:ok, subscriber} =
+      Zenohex.Session.declare_subscriber(
+        session,
+        "key_prefix/giocci/client_to_relay/" <> client_name <> "/" <> relay_name
+      )
+
+    {:ok, publisher} =
+      Zenohex.Session.declare_publisher(
+        session,
+        "key_prefix/giocci/relay_to_client/" <> relay_name <> "/" <> client_name
+      )
+
+    id_string = client_name <> relay_name
+    ## 状態として次の状態をもつ
+    state = %{
+      subscriber_client2relay: subscriber,
+      publisher_relay2client: publisher,
+      callback_client2relay: &callback_fromclient/2,
+      id: String.to_atom(id_string),
+      session: session
+    }
+
+    ## 上記の状態を保存する用のGenServerの起動
+    GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
+    Logger.info("key_prefix/giocci/client_to_relay/" <> relay_name)
+    ## subの開始
+    subscriber_loop_client2relay(state)
+    {:ok, state}
   end
 
   defp create_session([]) do

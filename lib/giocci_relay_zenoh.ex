@@ -13,12 +13,12 @@ defmodule GiocciRelayZenoh do
     最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定
   """
   def setup_relay() do
-    create_session(Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_node_name])
+    create_session(client_node_name())
   end
 
   def start_link(engine_name) do
     relay_name = my_node_name()
-    client_name = client_node_name()
+
     ## RelayのZenohセッションを起動
     {:ok, session} = Zenohex.open()
 
@@ -61,10 +61,9 @@ defmodule GiocciRelayZenoh do
   ## Clientから送られたデータを解析して、やりたい動作ごとに割り振るコールバック関数
   def callback_from_client(_state, message) do
     message_value = Map.get(message, :value)
-    relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
+    relay_name = my_node_name()
 
-    engine_name_tosend =
-      Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_name_tosend]
+    engine_name_tosend = engine_name_tosend()
 
     ## msgをバイナリからlistにもどす
     message_readable =
@@ -84,8 +83,7 @@ defmodule GiocciRelayZenoh do
 
       ## module_saveの場合
       [_, :module_save] ->
-        engine_name_tosend =
-          Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_name_tosend]
+        engine_name_tosend = engine_name_tosend()
 
         id = (relay_name <> engine_name_tosend) |> String.to_atom()
         ## publisherをセッションから作成しpublishする
@@ -102,10 +100,9 @@ defmodule GiocciRelayZenoh do
   def callback_from_engine(_state, message) do
     message_value = Map.get(message, :value)
 
-    relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
+    relay_name = my_node_name()
 
-    client_name_tosend =
-      Application.get_env(:giocci_relay_zenoh, :system_variables)[:client_name_tosend]
+    client_name_tosend = client_name_tosend()
 
     id = (client_name_tosend <> relay_name) |> String.to_atom()
     ## publisherをセッションから作成しpublishする
@@ -137,7 +134,7 @@ defmodule GiocciRelayZenoh do
   end
 
   defp create_clientsession(client_name) do
-    relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
+    relay_name = my_node_name()
     ## RelayのZenohセッションを起動
     {:ok, session} = Zenohex.open()
 
@@ -228,4 +225,10 @@ defmodule GiocciRelayZenoh do
 
   defp client_node_name(),
     do: Application.fetch_env!(:giocci_relay, :giocci_relay_zenoh)[:client_node_name]
+
+  defp client_name_tosend(),
+    do: Application.fetch_env!(:giocci_relay, :giocci_relay_zenoh)[:client_name_tosend]
+
+  defp engine_name_tosend(),
+    do: Application.fetch_env!(:giocci_relay, :giocci_relay_zenoh)[:engine_name_tosend]
 end

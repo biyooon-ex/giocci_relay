@@ -13,7 +13,8 @@ defmodule GiocciRelayZenoh do
     最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定
   """
   def setup_relay() do
-    create_session(client_node_name())
+    create_clientsession(client_node_name())
+    create_session(engine_node_name())
   end
 
   def start_link(engine_name) do
@@ -83,8 +84,6 @@ defmodule GiocciRelayZenoh do
 
       ## module_saveの場合
       [_, :module_save] ->
-        engine_name_tosend = engine_name_tosend()
-
         id = (relay_name <> engine_name_tosend) |> String.to_atom()
         ## publisherをセッションから作成しpublishする
         [publisher] = GenServer.call(id, :call_publisher_to_engine)
@@ -233,7 +232,7 @@ defmodule GiocciRelayZenoh do
     do: Application.fetch_env!(:giocci_relay, :giocci_relay_zenoh)[:engine_name_tosend]
 
   defp key_prefix() do
-    prefix = Application.fetch_env!(:giocci, :giocci_zenoh)[:key_prefix]
+    prefix = Application.fetch_env!(:giocci_relay, :giocci_relay_zenoh)[:key_prefix]
 
     if prefix == "" do
       ""

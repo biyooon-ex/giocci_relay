@@ -47,17 +47,15 @@ defmodule GiocciRelayZenoh do
       session: session
     }
 
-    ## 上記の状態を保存する用のGenServerの起動
-    GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
     Logger.info("from/" <> relay_name <> "/to/" <> engine_name)
-    ## subの開始
-    subscriber_loop_engine2relay(state)
-    subscriber_loop_client2relay(state)
-    {:ok, state}
+    GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
   end
 
-  def init(init_arg) do
-    {:ok, init_arg}
+  def init(state) do
+    subscriber_loop_engine2relay(state)
+    subscriber_loop_client2relay(state)
+
+    {:ok, state}
   end
 
   ## Clientから送られたデータを解析して、やりたい動作ごとに割り振るコールバック関数

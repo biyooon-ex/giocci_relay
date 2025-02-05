@@ -8,7 +8,6 @@ defmodule GiocciRelayZenoh do
 
   use GenServer
   require Logger
-  use Application
 
   @doc """
     最初に指定された数のEngineノードとのZenohコネクションを作成する（clientは一個想定
@@ -58,61 +57,53 @@ defmodule GiocciRelayZenoh do
     {:ok, state}
   end
 
+  def init(init_arg) do
+    {:ok, init_arg}
+  end
+
   ## Clientから送られたデータを解析して、やりたい動作ごとに割り振るコールバック関数
   def callback_fromclient(state, message) do
-    %{
-      key_expr: erkey,
-      value: message_intermediate,
-      kind: kind,
-      reference: reference
-    } = message
-
+    message_value = Map.get(message, :value)
     relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
+
+    engine_name_tosend =
+      Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_name_tosend]
+
     ## msgをバイナリからlistにもどす
     message_readable =
-      message_intermediate
+      Map.get(message, :value)
       |> String.trim()
       |> Base.decode64!()
       |> :erlang.binary_to_term()
 
     case message_readable do
       ## module_execの場合
-      [_, _, _, :module_exec] = message_readable ->
-        engine_name_tosend =
-          Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_name_tosend]
-
+      [_, _, _, :module_exec] ->
         id = (relay_name <> engine_name_tosend) |> String.to_atom()
         ## publisherをセッションから作成しpublishする
-        [publisher] =
-          GenServer.call(id, :call_publisher_toengine)
+        [publisher] = GenServer.call(id, :call_publisher_toengine)
 
-        Zenohex.Publisher.put(publisher, message_intermediate)
+        Zenohex.Publisher.put(publisher, message_value)
 
       ## module_saveの場合
-      [_, :module_save] = message_readable ->
+      [_, :module_save] ->
         engine_name_tosend =
           Application.get_env(:giocci_relay_zenoh, :system_variables)[:engine_name_tosend]
 
         id = (relay_name <> engine_name_tosend) |> String.to_atom()
         ## publisherをセッションから作成しpublishする
-        [publisher] =
-          GenServer.call(id, :call_publisher_toengine)
+        [publisher] = GenServer.call(id, :call_publisher_toengine)
 
-        Zenohex.Publisher.put(publisher, message_intermediate)
+        Zenohex.Publisher.put(publisher, message_value)
 
-      _ = message_readable ->
+      _ ->
         Logger.error(inspect("no match"))
     end
   end
 
   ## Engineから送られたメッセージを抽出し、Clientに返送
   def callback_fromengine(state, message) do
-    %{
-      key_expr: erkey,
-      value: message_intermediate,
-      kind: kind,
-      reference: reference
-    } = message
+    message_value = Map.get(message, :value)
 
     relay_name = Application.get_env(:giocci_relay_zenoh, :system_variables)[:my_node_name]
 
@@ -121,10 +112,9 @@ defmodule GiocciRelayZenoh do
 
     id = (client_name_tosend <> relay_name) |> String.to_atom()
     ## publisherをセッションから作成しpublishする
-    [publisher] =
-      GenServer.call(id, :call_publisher_toclient)
+    [publisher] = GenServer.call(id, :call_publisher_toclient)
 
-    Zenohex.Publisher.put(publisher, message_intermediate)
+    Zenohex.Publisher.put(publisher, message_value)
   end
 
   def handle_call(:call_publisher_toengine, _from, state) do

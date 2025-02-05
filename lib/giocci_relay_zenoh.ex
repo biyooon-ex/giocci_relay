@@ -77,7 +77,7 @@ defmodule GiocciRelayZenoh do
       [_, _, _, :module_exec] ->
         id = (relay_name <> engine_name_tosend) |> String.to_atom()
         ## publisherをセッションから作成しpublishする
-        [publisher] = GenServer.call(id, :call_publisher_toengine)
+        [publisher] = GenServer.call(id, :call_publisher_to_engine)
 
         Zenohex.Publisher.put(publisher, message_value)
 
@@ -87,7 +87,7 @@ defmodule GiocciRelayZenoh do
 
         id = (relay_name <> engine_name_tosend) |> String.to_atom()
         ## publisherをセッションから作成しpublishする
-        [publisher] = GenServer.call(id, :call_publisher_toengine)
+        [publisher] = GenServer.call(id, :call_publisher_to_engine)
 
         Zenohex.Publisher.put(publisher, message_value)
 
@@ -106,17 +106,17 @@ defmodule GiocciRelayZenoh do
 
     id = (client_name_tosend <> relay_name) |> String.to_atom()
     ## publisherをセッションから作成しpublishする
-    [publisher] = GenServer.call(id, :call_publisher_toclient)
+    [publisher] = GenServer.call(id, :call_publisher_to_client)
 
     Zenohex.Publisher.put(publisher, message_value)
   end
 
-  def handle_call(:call_publisher_toengine, _from, state) do
+  def handle_call(:call_publisher_to_engine, _from, state) do
     reply = [state.publisher_relay_to_engine]
     {:reply, reply, state}
   end
 
-  def handle_call(:call_publisher_toclient, _from, state) do
+  def handle_call(:call_publisher_to_client, _from, state) do
     reply = [state.publisher_relay_to_client]
     {:reply, reply, state}
   end

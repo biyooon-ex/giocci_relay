@@ -26,14 +26,14 @@ defmodule GiocciRelayZenoh do
     {:ok, subscriber} =
       Zenohex.Session.declare_subscriber(
         session,
-        "key_prefix/giocci/engine_to_relay/" <> engine_name <> "/" <> relay_name
+        key_prefix() <> "giocci/engine_to_relay/" <> engine_name <> "/" <> relay_name
       )
 
     ## pubキーをたてる
     {:ok, publisher} =
       Zenohex.Session.declare_publisher(
         session,
-        "key_prefix/giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name
+        key_prefix() <> "giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name
       )
 
     id_string = relay_name <> engine_name
@@ -48,7 +48,7 @@ defmodule GiocciRelayZenoh do
 
     ## 上記の状態を保存する用のGenServerの起動
     GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
-    Logger.info("key_prefix/giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name)
+    Logger.info(key_prefix() <> "giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name)
     ## subの開始
     subscriber_loop_engine_to_relay(state)
     {:ok, state}
@@ -143,13 +143,13 @@ defmodule GiocciRelayZenoh do
     {:ok, subscriber} =
       Zenohex.Session.declare_subscriber(
         session,
-        "key_prefix/giocci/client_to_relay/" <> client_name <> "/" <> relay_name
+        key_prefix() <> "giocci/client_to_relay/" <> client_name <> "/" <> relay_name
       )
 
     {:ok, publisher} =
       Zenohex.Session.declare_publisher(
         session,
-        "key_prefix/giocci/relay_to_client/" <> relay_name <> "/" <> client_name
+        key_prefix() <> "giocci/relay_to_client/" <> relay_name <> "/" <> client_name
       )
 
     id_string = client_name <> relay_name
@@ -164,7 +164,7 @@ defmodule GiocciRelayZenoh do
 
     ## 上記の状態を保存する用のGenServerの起動
     GenServer.start_link(__MODULE__, state, name: String.to_atom(id_string))
-    Logger.info("key_prefix/giocci/client_to_relay/" <> relay_name)
+    Logger.info(key_prefix() <> "giocci/client_to_relay/" <> relay_name)
     ## subの開始
     subscriber_loop_client_to_relay(state)
     {:ok, state}
@@ -231,4 +231,14 @@ defmodule GiocciRelayZenoh do
 
   defp engine_name_tosend(),
     do: Application.fetch_env!(:giocci_relay, :giocci_relay_zenoh)[:engine_name_tosend]
+
+  defp key_prefix() do
+    prefix = Application.fetch_env!(:giocci, :giocci_zenoh)[:key_prefix]
+
+    if prefix == "" do
+      ""
+    else
+      prefix <> "/"
+    end
+  end
 end

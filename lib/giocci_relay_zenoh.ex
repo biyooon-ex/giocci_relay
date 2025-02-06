@@ -57,8 +57,10 @@ defmodule GiocciRelayZenoh do
     {:ok, state}
   end
 
-  def init(init_arg) do
-    {:ok, init_arg}
+  def init(state) do
+    subscriber_loop_engine2relay(state)
+    subscriber_loop_client2relay(state)
+    {:ok, state}
   end
 
   ## Clientから送られたデータを解析して、やりたい動作ごとに割り振るコールバック関数

@@ -26,7 +26,7 @@ defmodule GiocciRelay.Application do
 
     giocci_relay_zenoh_engine_childlen =
       for engine <- engines do
-        Supervisor.child_spec({GiocciRelayZenoh, engine}, id: String.to_atom(engine))
+        Supervisor.child_spec({GiocciRelay.EngineSessionNode, engine}, id: String.to_atom(engine))
       end
 
     giocci_relay_zenoh_client_child = [

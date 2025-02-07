@@ -4,7 +4,7 @@ defmodule GiocciRelay.MixProject do
   def project do
     [
       app: :giocci_relay,
-      version: "0.3.0-rc1",
+      version: "0.3.0-rc2",
       elixir: "~> 1.13",
       start_permanent: Mix.env() == :prod,
       deps: deps()
@@ -22,7 +22,8 @@ defmodule GiocciRelay.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:zenohex, "~>0.3.2"}
+      {:zenohex, "~>0.3.2"},
+      {:dotenvy, "~> 1.0.0"}
       # {:dep_from_hexpm, "~> 0.3.0"},
       # {:dep_from_git, git: "https://github.com/elixir-lang/my_dep.git", tag: "0.1.0"}
     ]

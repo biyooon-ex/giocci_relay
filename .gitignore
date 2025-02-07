@@ -27,3 +27,6 @@ giocci_relay-*.tar
 
 # color theme
 .vscode/settings.json
+
+# Sample file for Giocci configuration in your application
+.env

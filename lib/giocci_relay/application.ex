@@ -18,10 +18,19 @@ defmodule GiocciRelay.Application do
     ## durty fix: avoid errors caused by removed variables
     rpc_engine_name = "engine1"
 
-    children = [
-      # Starts a worker by calling: GiocciRelay.Worker.start_link(arg)
-      {GiocciRelay.Server, [my_process_name, node_engine_name, rpc_engine_name]}
-    ]
+    # TODO： EngineのリストはDotenvyから読み込むようにする
+    engines = ["engine1", "engine2", "engine3", "engine4", "engine5"]
+
+    giocci_relay_zenoh_child =
+      for engine <- engines do
+        Supervisor.child_spec({GiocciRelayZenoh, engine}, id: String.to_atom(engine))
+      end
+
+    children =
+      [
+        # Starts a worker by calling: GiocciRelay.Worker.start_link(arg)
+        {GiocciRelay.Server, [my_process_name, node_engine_name, rpc_engine_name]}
+      ] ++ giocci_relay_zenoh_child
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

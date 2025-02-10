@@ -1,11 +1,10 @@
 defmodule GiocciRelay.EngineSessionNode do
   use GenServer
-  alias GiocciRelay.Config
-  alias GiocciRelay.ClientSessionNode
+  alias GiocciRelay.Config, as: RelayConfig
   require Logger
 
   def start_link(engine_name) do
-    relay_name = Config.my_node_name()
+    relay_name = RelayConfig.my_node_name()
     Logger.info("(GiocciRelay) Start GenServer ID:" <> relay_name <> engine_name)
 
     ## RelayのZenohセッションを起動
@@ -15,24 +14,24 @@ defmodule GiocciRelay.EngineSessionNode do
     {:ok, subscriber} =
       Zenohex.Session.declare_subscriber(
         session,
-        Config.key_prefix() <> "giocci/engine_to_relay/" <> engine_name <> "/" <> relay_name
+        RelayConfig.key_prefix() <> "giocci/engine_to_relay/" <> engine_name <> "/" <> relay_name
       )
 
     Logger.info(
       "(GiocciRelay)  Start subscriber(engine to relay) :" <>
-        Config.key_prefix() <> "giocci/engine_to_relay/" <> engine_name <> "/" <> relay_name
+        RelayConfig.key_prefix() <> "giocci/engine_to_relay/" <> engine_name <> "/" <> relay_name
     )
 
     ## pubキーをたてる
     {:ok, publisher} =
       Zenohex.Session.declare_publisher(
         session,
-        Config.key_prefix() <> "giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name
+        RelayConfig.key_prefix() <> "giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name
       )
 
     Logger.info(
       "(GiocciRelay)  Start publisher (relay to engine) :" <>
-        Config.key_prefix() <> "giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name
+        RelayConfig.key_prefix() <> "giocci/relay_to_engine/" <> relay_name <> "/" <> engine_name
     )
 
     id_string = relay_name <> engine_name
@@ -59,9 +58,9 @@ defmodule GiocciRelay.EngineSessionNode do
   def callback_from_engine(_state, message) do
     message_value = Map.get(message, :value)
 
-    relay_name = Config.my_node_name()
+    relay_name = RelayConfig.my_node_name()
 
-    client_name_tosend = Config.client_name_tosend()
+    client_name_tosend = RelayConfig.client_name_tosend()
 
     id = (client_name_tosend <> relay_name) |> String.to_atom()
     ## publisherをセッションから作成しpublishする
@@ -81,12 +80,12 @@ defmodule GiocciRelay.EngineSessionNode do
     {:noreply, state}
   end
 
-  defp create_session([]) do
+  def create_session([]) do
     :ok
   end
 
   ## セッションを作る関数
-  defp create_session(engine_list) do
+  def create_session(engine_list) do
     [engine_name | tail] = engine_list
     start_link(engine_name)
     create_session(tail)

@@ -1,4 +1,6 @@
 defmodule GiocciRelayZenoh do
+  alias GiocciRelay.Config, as: RelayConfig
+
   @moduledoc """
   ## Examples
 
@@ -10,7 +12,7 @@ defmodule GiocciRelayZenoh do
   """
   # @deprecated
   def setup_relay() do
-    ClientSessionNode.start_link(Config.client_node_name())
-    EngineSessionNode.create_session(Config.engine_node_name())
+    GiocciRelay.ClientSessionNode.start_link(RelayConfig.client_node_name())
+    GiocciRelay.EngineSessionNode.create_session(RelayConfig.engine_node_name())
   end
 end

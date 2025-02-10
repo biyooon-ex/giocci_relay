@@ -1,10 +1,10 @@
 defmodule GiocciRelay.ClientSessionNode do
   use GenServer
-  alias GiocciRelay.Config
+  alias GiocciRelay.Config, as: RelayConfig
   require Logger
 
   def start_link(client_name) do
-    relay_name = Config.my_node_name()
+    relay_name = RelayConfig.my_node_name()
     Logger.info("(GiocciRelay) Start GenServer ID: " <> client_name <> relay_name)
     ## RelayのZenohセッションを起動
     {:ok, session} = Zenohex.open()
@@ -13,23 +13,23 @@ defmodule GiocciRelay.ClientSessionNode do
     {:ok, subscriber} =
       Zenohex.Session.declare_subscriber(
         session,
-        Config.key_prefix() <> "giocci/client_to_relay/" <> client_name <> "/" <> relay_name
+        RelayConfig.key_prefix() <> "giocci/client_to_relay/" <> client_name <> "/" <> relay_name
       )
 
     Logger.info(
       "(GiocciRelay) Start subscriber (client to relay) :" <>
-        Config.key_prefix() <> "giocci/client_to_relay/" <> client_name <> "/" <> relay_name
+        RelayConfig.key_prefix() <> "giocci/client_to_relay/" <> client_name <> "/" <> relay_name
     )
 
     {:ok, publisher} =
       Zenohex.Session.declare_publisher(
         session,
-        Config.key_prefix() <> "giocci/relay_to_client/" <> relay_name <> "/" <> client_name
+        RelayConfig.key_prefix() <> "giocci/relay_to_client/" <> relay_name <> "/" <> client_name
       )
 
     Logger.info(
       "(GiocciRelay) Start publisher (relay to client) :" <>
-        Config.key_prefix() <> "giocci/relay_to_client/" <> relay_name <> "/" <> client_name
+        RelayConfig.key_prefix() <> "giocci/relay_to_client/" <> relay_name <> "/" <> client_name
     )
 
     id_string = client_name <> relay_name
@@ -55,9 +55,9 @@ defmodule GiocciRelay.ClientSessionNode do
   ## Clientから送られたデータを解析して、やりたい動作ごとに割り振るコールバック関数
   def callback_from_client(_state, message) do
     message_value = Map.get(message, :value)
-    relay_name = Config.my_node_name()
+    relay_name = RelayConfig.my_node_name()
 
-    engine_name_tosend = Config.engine_name_tosend()
+    engine_name_tosend = RelayConfig.engine_name_tosend()
 
     ## msgをバイナリからlistにもどす
     message_readable =

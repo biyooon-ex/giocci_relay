@@ -4,7 +4,7 @@ defmodule GiocciRelay.Application do
   @moduledoc false
 
   use Application
-  alias GiocciRelay.Config
+  alias GiocciRelay.Config, as: RelayConfig
 
   @impl true
   def start(_type, _args) do
@@ -21,8 +21,8 @@ defmodule GiocciRelay.Application do
 
     # # TODO： EngineのリストはDotenvyから読み込むようにする
     # engines = ["engine1", "engine2", "engine3", "engine4", "engine5"]
-    engines = Config.engine_node_name()
-    client = Config.client_node_name()
+    engines = RelayConfig.engine_node_name()
+    client = RelayConfig.client_node_name()
 
     giocci_relay_zenoh_engine_childlen =
       for engine <- engines do

@@ -1,27 +1,51 @@
 defmodule GiocciRelay.Zenoh do
-  @moduledoc """
-  ## Examples
+  @moduledoc false
 
-      iex> GiocciRelayZenoh.setup_relay()
-
-  """
-  use Supervisor
+  use GenServer
   require Logger
 
-  @doc "Start Subscriber."
+  alias Zenohex.Session
+  alias Zenohex.Publisher
+
   def start_link(_args) do
-    Supervisor.start_link(__MODULE__, nil, name: __MODULE__)
+    GenServer.start_link(__MODULE__, nil, name: __MODULE__)
   end
 
-  @doc false
   def init(_args) do
-    children = [
-      GiocciRelay.Zenoh.Impl
-    ]
+    my_node_name = Application.fetch_env!(:giocci_relay, :system_variables)[:my_node_name]
+    key_space = Application.fetch_env!(:giocci_relay, :system_variables)[:key_space]
 
-    Supervisor.init(children, strategy: :one_for_one)
+    {:ok, session} = Session.open()
+
+    {:ok, subscriber} =
+      Session.declare_subscriber(session, key_space <> "relay/" <> my_node_name <> "/*")
+
+    callback = &relay_callback/2
+
+    state = %{session: session, subscriber: subscriber, callback: callback}
+
+    {:ok, state}
   end
 
-  @doc false
-  def child_spec(args), do: super(args)
+  def handle_info(%Zenohex.Sample{} = sample, state) do
+    %{session: session, callback: callback} = state
+    callback.(session, sample)
+    {:noreply, state}
+  end
+
+  defp relay_callback(session, sample) do
+    key_space = Application.fetch_env!(:giocci_relay, :system_variables)[:key_space]
+    payload_decoded = :erlang.binary_to_term(sample.payload)
+    engine = Map.get(payload_decoded, "engine") |> to_string()
+    magic_number = Map.get(payload_decoded, "magic_number") |> to_string()
+    pub_key = key_space <> "engine/" <> engine <> "/" <> magic_number
+
+    {:ok, publisher} = Session.declare_publisher(session, pub_key)
+
+    Logger.info(
+      "Relay: from #{inspect(Application.fetch_env!(:giocci_relay, :system_variables)[:my_node_name])} to #{inspect(engine)} with magic number #{inspect(magic_number)}"
+    )
+
+    Publisher.put(publisher, sample.payload)
+  end
 end

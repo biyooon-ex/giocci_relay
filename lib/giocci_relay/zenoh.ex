@@ -6,6 +6,7 @@ defmodule GiocciRelay.Zenoh do
 
   alias Zenohex.Session
   alias Zenohex.Publisher
+  alias Zenohex.Sample
 
   def start_link(_args) do
     GenServer.start_link(__MODULE__, nil, name: __MODULE__)
@@ -27,7 +28,7 @@ defmodule GiocciRelay.Zenoh do
     {:ok, state}
   end
 
-  def handle_info(%Zenohex.Sample{} = sample, state) do
+  def handle_info(%Sample{} = sample, state) do
     %{session: session, callback: callback} = state
     magic_number = sample.key_expr |> String.split("/") |> List.last()
     callback.(session, sample, magic_number)

@@ -47,5 +47,7 @@ defmodule GiocciRelay.Zenoh do
     )
 
     Publisher.put(publisher, sample.payload)
+
+    Publisher.undeclare(publisher)
   end
 end

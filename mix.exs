@@ -23,14 +23,7 @@ defmodule GiocciRelay.MixProject do
   defp deps do
     [
       {:dotenvy, "~> 0.9.0"},
-      # TODO: need to rebase after releasing zenohex 0.4.0
-      # {:zenohex, "~> 0.3.2"}
-      {
-        :zenohex,
-        git: "https://github.com/pojiro/zenohex.git",
-        ref: "d385b1b614d8c137882aa07b5e203e1f1574863e"
-      },
-      {:rustler, ">= 0.0.0", optional: true}
+      {:zenohex, "~> 0.4.0"}
     ]
   end
 end
